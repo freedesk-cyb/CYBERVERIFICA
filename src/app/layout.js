@@ -36,7 +36,7 @@ export const metadata = {
     follow: true,
   },
   verification: {
-    google: 'google9d0c81156e240298',
+    google: '9zy-wCKRv9bVyqMpLrQpGvUWIs3n146pk4RCFG0uS6o',
   }
 };
 

@@ -58,20 +58,15 @@ export async function analizarMensajeConGroq(mensaje, telemetriaVT = null, telem
 
   const hayImagen = typeof imagenBase64 === 'string' && imagenBase64.startsWith('data:image/');
 
-  // Modelos optimizados para máxima velocidad y precisión forense en Groq Cloud
-  // (con imagen: modelos con capacidad de visión multimodal)
-  const modelos = hayImagen
-    ? [
-        'llama-3.2-11b-vision-preview',
-        'llama-3.2-90b-vision-preview',
-      ]
-    : [
-        'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant',
-      ];
+  // Modelos activos verificados en Groq Cloud API
+  const modelos = [
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-20b',
+    'openai/gpt-oss-120b',
+  ];
 
   let userPrompt = hayImagen
-    ? 'Analiza la imagen adjunta (captura de una conversacion). Este es el texto extraido de ella por OCR:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>\n\nObserva tambien los elementos visuales (logos falsos, diseno suplantado, capturas de chat, codigos QR) y realiza el informe forense completo.'
+    ? 'Analiza el texto de la siguiente captura de pantalla de conversación:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>\n\nRealiza un informe forense detallado del posible fraude.'
     : 'Realiza un informe forense completo del siguiente mensaje sospechoso:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>';
 
   if (telemetriaVT && telemetriaVT.consultado && telemetriaVT.stats) {
@@ -105,17 +100,10 @@ export async function analizarMensajeConGroq(mensaje, telemetriaVT = null, telem
 
   for (const modelo of modelos) {
     try {
-      const contenidoUsuario = hayImagen
-        ? [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: imagenBase64 } },
-          ]
-        : userPrompt;
-
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: SYSTEM_PROMPT_GROQ_DETALLADO },
-          { role: 'user', content: contenidoUsuario },
+          { role: 'user', content: userPrompt },
         ],
         model: modelo,
         temperature: 0.1,

@@ -416,7 +416,7 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
           setEstadoOCR(`🔍 Leyendo texto de la captura ${i + 1} de ${imagenes.length}...`);
           
           const { createWorker } = await import('tesseract.js');
-          const ocrWorker = await createWorker(['spa', 'eng'], 1, {
+          const ocrWorker = await createWorker('spa+eng', 1, {
             logger: (m) => {
               if (m.status === 'recognizing text' && m.progress) {
                 setEstadoOCR(`🔍 Leyendo captura ${i + 1} (${Math.round(m.progress * 100)}%)...`);

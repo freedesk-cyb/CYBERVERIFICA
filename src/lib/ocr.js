@@ -10,7 +10,7 @@ export async function extractTextFromImage(imageFile, onProgress) {
   // Importación dinámica para que no rompa el build SSR de Next.js
   const { createWorker } = await import('tesseract.js');
 
-  const worker = await createWorker(['spa', 'eng'], 1, {
+  const worker = await createWorker('spa+eng', 1, {
     logger: (m) => {
       if (m.status === 'recognizing text' && onProgress) {
         onProgress(Math.round(m.progress * 100));

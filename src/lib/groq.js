@@ -58,17 +58,16 @@ export async function analizarMensajeConGroq(mensaje, telemetriaVT = null, telem
 
   const hayImagen = typeof imagenBase64 === 'string' && imagenBase64.startsWith('data:image/');
 
-  // Modelos optimizados para maxima velocidad y precision forense
-  // (con imagen: modelos con capacidad de vision multimodal)
+  // Modelos optimizados para máxima velocidad y precisión forense en Groq Cloud
+  // (con imagen: modelos con capacidad de visión multimodal)
   const modelos = hayImagen
     ? [
-        'meta-llama/llama-4-scout-17b-16e-instruct',
-        'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'llama-3.2-11b-vision-preview',
+        'llama-3.2-90b-vision-preview',
       ]
     : [
-        'qwen/qwen3.8-27b',
-        'openai/gpt-oss-20b',
-        'openai/gpt-oss-120b',
+        'llama-3.3-70b-versatile',
+        'llama-3.1-8b-instant',
       ];
 
   let userPrompt = hayImagen

@@ -71,19 +71,19 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
     return () => clearInterval(timer);
   }, []);
 
-  // Comprime una imagen a data URL base64 (máx. 1024px) para análisis visual de las IAs
+  // Comprime una imagen a data URL base64 (máx. 800px) para análisis visual de las IAs
   const comprimirImagenABase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 1024;
+        const max = 800;
         const escala = Math.min(1, max / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * escala);
         canvas.height = Math.round(img.height * escala);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.65));
       };
       img.onerror = () => reject(new Error('No se pudo leer la imagen para el análisis visual.'));
       img.src = reader.result;
@@ -400,13 +400,20 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
       }
 
       setEstaCargando(true);
-      setEstadoOCR('🔍 Extrayendo texto de la(s) captura(s)...');
+      setEstadoOCR('🔍 Preparando captura para análisis visual con IA...');
 
+      // 1. Preparar siempre la imagen comprimida para el análisis visual multimodal de las IAs
       try {
-        let textoExtraidoTotal = '';
+        imagenParaIA = await comprimirImagenABase64(imagenes[0].file);
+      } catch (imgErr) {
+        console.warn('No se pudo preparar la imagen para análisis visual:', imgErr);
+      }
 
+      // 2. Intentar extraer texto mediante OCR como complemento
+      let textoExtraidoTotal = '';
+      try {
         for (let i = 0; i < imagenes.length; i++) {
-          setEstadoOCR(`🔍 Leyendo captura ${i + 1} de ${imagenes.length}...`);
+          setEstadoOCR(`🔍 Leyendo texto de la captura ${i + 1} de ${imagenes.length}...`);
           
           const { createWorker } = await import('tesseract.js');
           const ocrWorker = await createWorker(['spa', 'eng'], 1, {
@@ -419,33 +426,21 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
           const { data: { text: ocrText } } = await ocrWorker.recognize(imagenes[i].file);
           await ocrWorker.terminate();
           
-          if (ocrText) {
+          if (ocrText && ocrText.trim().length > 0) {
             textoExtraidoTotal += `\n[Captura ${i + 1}]:\n` + ocrText.trim() + '\n';
           }
         }
-
-        if (!textoExtraidoTotal.trim() || textoExtraidoTotal.trim().length < 5) {
-          throw new Error('No se pudo detectar texto legible en la imagen. Intenta con una captura más nítida o escribe el mensaje manualmente.');
-        }
-
-        contenidoAAnalizar = `Conversación extraída de captura(s) de pantalla:\n${textoExtraidoTotal.trim()}`;
-
-        // Preparar la primera captura para el análisis visual de las IAs
-        try {
-          imagenParaIA = await comprimirImagenABase64(imagenes[0].file);
-        } catch (imgErr) {
-          console.warn('No se pudo preparar la imagen para análisis visual:', imgErr);
-        }
-
-        setEstadoOCR('🧠 Analizando señales de fraude con Inteligencia Artificial...');
-
       } catch (ocrErr) {
-        console.error('Error OCR:', ocrErr);
-        setEstaCargando(false);
-        setEstadoOCR('');
-        setErrorValidacion(ocrErr.message || 'Error al procesar la imagen.');
-        return;
+        console.warn('OCR falló o fue omitido, continuando con visión por IA:', ocrErr);
       }
+
+      if (textoExtraidoTotal.trim().length >= 5) {
+        contenidoAAnalizar = `Conversación extraída de captura(s) de pantalla:\n${textoExtraidoTotal.trim()}`;
+      } else {
+        contenidoAAnalizar = 'Captura de pantalla adjunta para análisis visual forense con Inteligencia Artificial.';
+      }
+
+      setEstadoOCR('🧠 Analizando señales de fraude con Inteligencia Artificial...');
     } else if (tabActivo === 'qr') {
       if (!qrDecodificado) {
         if (qrImagen) {

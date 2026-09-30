@@ -153,11 +153,37 @@ const ORIGENES_PERMITIDOS = [
 export function validarOrigen(request) {
   const origin = request.headers.get('origin');
 
-  // Requests same-origin (navegación directa, fetch sin mode: 'cors')
-  // no incluyen el header Origin → permitir
+  // Requests same-origin sin header Origin -> permitir
   if (!origin) return true;
 
-  return ORIGENES_PERMITIDOS.some(permitido =>
-    origin.toLowerCase() === permitido.toLowerCase()
-  );
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+
+  try {
+    const originUrl = new URL(origin);
+    const originHost = originUrl.host.toLowerCase();
+    const originHostname = originUrl.hostname.toLowerCase();
+
+    // 1. Si el host de la petición coincide con el host del origin (mismo sitio web) -> Permitir
+    if (host && originHost === host.toLowerCase()) {
+      return true;
+    }
+
+    // 2. Permitir dominios del proyecto (producción, Cloudflare Workers, Vercel, localhost)
+    if (
+      originHostname === 'verificaya.pe' ||
+      originHostname === 'www.verificaya.pe' ||
+      originHostname === 'localhost' ||
+      originHostname === '127.0.0.1' ||
+      originHostname.endsWith('.workers.dev') ||
+      originHostname.endsWith('.vercel.app') ||
+      originHostname.endsWith('.pages.dev')
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
 }
+

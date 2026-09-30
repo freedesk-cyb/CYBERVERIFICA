@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { extraerJson } from './extraerJson';
+import { sanitizarParaPrompt, ANCLA_ANTI_INYECCION } from './seguridad';
 
 // Inicializar cliente Groq con la clave de entorno
 const groqApiKey = process.env.GROQ_API_KEY || '';
@@ -71,8 +72,8 @@ export async function analizarMensajeConGroq(mensaje, telemetriaVT = null, telem
       ];
 
   let userPrompt = hayImagen
-    ? 'Analiza la imagen adjunta (captura de una conversacion). Este es el texto extraido de ella por OCR:\n\n"""\n' + mensaje + '\n"""\n\nObserva tambien los elementos visuales (logos falsos, diseno suplantado, capturas de chat, codigos QR) y realiza el informe forense completo.'
-    : 'Realiza un informe forense completo del siguiente mensaje sospechoso:\n\n"""\n' + mensaje + '\n"""';
+    ? 'Analiza la imagen adjunta (captura de una conversacion). Este es el texto extraido de ella por OCR:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>\n\nObserva tambien los elementos visuales (logos falsos, diseno suplantado, capturas de chat, codigos QR) y realiza el informe forense completo.'
+    : 'Realiza un informe forense completo del siguiente mensaje sospechoso:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>';
 
   if (telemetriaVT && telemetriaVT.consultado && telemetriaVT.stats) {
     const { malicious, suspicious, total } = telemetriaVT.stats;
@@ -97,6 +98,9 @@ export async function analizarMensajeConGroq(mensaje, telemetriaVT = null, telem
       (telemetriaHA.entorno ? '- Entorno de ejecucion: ' + telemetriaHA.entorno + '\n' : '') +
       'Integra este analisis de comportamiento en tu analisis_tecnico y senales forenses.';
   }
+
+  // V-01: Ancla anti-inyeccion al final del prompt
+  userPrompt += ANCLA_ANTI_INYECCION;
 
   let ultimoError = null;
 

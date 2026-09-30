@@ -19,8 +19,26 @@ export const LIMITES_CONSULTAS = {
 
 // -------------------------------------------------------------
 // SERVIDOR: Almacén en memoria volátil indexado por IP + Modalidad
+// ⚠️  PRODUCCIÓN: En serverless (Vercel) cada instancia tiene su
+//     propio Map → usar Upstash Redis o Vercel KV para persistencia.
 // -------------------------------------------------------------
 const registroServidorIP = new Map(); // key: `${ip}_${modalidad}` -> [timestamps]
+const MAX_ENTRADAS_MAP = 50_000; // V-07: Límite duro para prevenir memory leak
+
+// V-07: Limpieza periódica de entries expiradas (cada 10 minutos)
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const ahora = Date.now();
+    for (const [key, timestamps] of registroServidorIP) {
+      const vigentes = timestamps.filter((t) => ahora - t < VENTANA_MS);
+      if (vigentes.length === 0) {
+        registroServidorIP.delete(key);
+      } else {
+        registroServidorIP.set(key, vigentes);
+      }
+    }
+  }, 10 * 60 * 1000); // cada 10 minutos
+}
 
 /**
  * Limpia timestamps vencidos (> 12 horas)
@@ -57,9 +75,14 @@ export function verificarLimiteServidor(ip, modalidad = 'mensaje') {
     };
   }
 
-  // Registrar nuevo intento
-  vigentes.push(ahora);
-  registroServidorIP.set(key, vigentes);
+  // Registrar nuevo intento (V-07: respetar límite de entradas del Map)
+  if (registroServidorIP.size < MAX_ENTRADAS_MAP) {
+    vigentes.push(ahora);
+    registroServidorIP.set(key, vigentes);
+  } else {
+    // Map lleno: permitir la consulta pero no registrar para no crecer más
+    console.warn('rateLimit: Map alcanzó el límite de', MAX_ENTRADAS_MAP, 'entradas. No se registra esta consulta.');
+  }
 
   const restante = Math.max(0, maxPermitido - vigentes.length);
   const masAntiguo = Math.min(...vigentes);

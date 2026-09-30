@@ -5,6 +5,7 @@
  */
 
 import { extraerJson } from './extraerJson';
+import { sanitizarParaPrompt, ANCLA_ANTI_INYECCION } from './seguridad';
 
 const OPENCODE_API_KEY = process.env.OPENCODE_API_KEY || '';
 const BASE_URL = process.env.OPENCODE_BASE_URL || 'https://opencode.ai/inference/openai/v1';
@@ -49,8 +50,8 @@ export async function analizarMensajeConOpencode(mensaje, telemetriaVT = null, t
   const hayImagen = typeof imagenBase64 === 'string' && imagenBase64.startsWith('data:image/');
 
   let userPrompt = hayImagen
-    ? 'Analiza la imagen adjunta (captura de una conversacion). Este es el texto extraido de ella por OCR:\n\n"""\n' + mensaje + '\n"""\n\nObserva tambien los elementos visuales (logos falsos, diseno suplantado, capturas de chat, codigos QR) y determina el riesgo de estafa.'
-    : 'Analiza el siguiente mensaje y determina el riesgo de estafa:\n\n"""\n' + mensaje + '\n"""';
+    ? 'Analiza la imagen adjunta (captura de una conversacion). Este es el texto extraido de ella por OCR:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>\n\nObserva tambien los elementos visuales (logos falsos, diseno suplantado, capturas de chat, codigos QR) y determina el riesgo de estafa.'
+    : 'Analiza el siguiente mensaje y determina el riesgo de estafa:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n' + sanitizarParaPrompt(mensaje) + '\n<<<FIN_MENSAJE_CIUDADANO>>>';
 
   if (telemetriaVT && telemetriaVT.consultado && telemetriaVT.stats) {
     const { malicious, suspicious, total } = telemetriaVT.stats;
@@ -60,6 +61,9 @@ export async function analizarMensajeConOpencode(mensaje, telemetriaVT = null, t
   if (telemetriaHA && telemetriaHA.consultado) {
     userPrompt += '\n\n[EVIDENCIA FALCON SANDBOX]: Threat Score ' + telemetriaHA.threat_score + '/100, Veredicto: ' + telemetriaHA.veredicto + '.';
   }
+
+  // V-01: Ancla anti-inyeccion al final del prompt
+  userPrompt += ANCLA_ANTI_INYECCION;
 
   let ultimoError = null;
 

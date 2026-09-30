@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { validarUrlExterna } from './seguridad';
 
 /**
  * Integración con la API v2 de Hybrid Analysis (CrowdStrike Falcon Sandbox)
@@ -25,6 +26,13 @@ export function generarSha256(input) {
 export async function consultarUrlEnHybridAnalysis(url) {
   if (!url || typeof url !== 'string') {
     return { consultado: false, error: 'URL no válida' };
+  }
+
+  // V-02: Prevención SSRF — rechazar URLs internas/privadas
+  const checkSSRF = validarUrlExterna(url);
+  if (!checkSSRF.segura) {
+    console.warn('SSRF bloqueado en Hybrid Analysis:', checkSSRF.razon, url);
+    return { consultado: false, error: 'URL no permitida para análisis externo.' };
   }
 
   // Verificar si la clave API está configurada

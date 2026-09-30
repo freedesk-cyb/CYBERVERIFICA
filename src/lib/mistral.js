@@ -5,6 +5,7 @@
  */
 
 import { extraerJson } from './extraerJson';
+import { sanitizarParaPrompt, ANCLA_ANTI_INYECCION } from './seguridad';
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY || '';
 
@@ -56,8 +57,8 @@ export async function analizarMensajeConMistral(mensaje, telemetriaVT = null, te
       ];
 
   let userPrompt = hayImagen
-    ? `Analiza la imagen adjunta (captura de una conversación). Este es el texto extraído de ella por OCR:\n\n"""\n${mensaje}\n"""\n\nObserva también los elementos visuales (logos falsos, diseño suplantado, capturas de chat, códigos QR) y determina el riesgo de estafa.`
-    : `Analiza el siguiente mensaje y determina el riesgo de estafa:\n\n"""\n${mensaje}\n"""`;
+    ? `Analiza la imagen adjunta (captura de una conversación). Este es el texto extraído de ella por OCR:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n${sanitizarParaPrompt(mensaje)}\n<<<FIN_MENSAJE_CIUDADANO>>>\n\nObserva también los elementos visuales (logos falsos, diseño suplantado, capturas de chat, códigos QR) y determina el riesgo de estafa.`
+    : `Analiza el siguiente mensaje y determina el riesgo de estafa:\n\n<<<INICIO_MENSAJE_CIUDADANO>>>\n${sanitizarParaPrompt(mensaje)}\n<<<FIN_MENSAJE_CIUDADANO>>>`;
 
   if (telemetriaVT && telemetriaVT.consultado && telemetriaVT.stats) {
     const { malicious, suspicious, total } = telemetriaVT.stats;
@@ -67,6 +68,9 @@ export async function analizarMensajeConMistral(mensaje, telemetriaVT = null, te
   if (telemetriaHA && telemetriaHA.consultado) {
     userPrompt += `\n\n[EVIDENCIA FALCON SANDBOX]: Threat Score ${telemetriaHA.threat_score}/100, Veredicto: ${telemetriaHA.veredicto}.`;
   }
+
+  // V-01: Ancla anti-inyeccion al final del prompt
+  userPrompt += ANCLA_ANTI_INYECCION;
 
   let ultimoError = null;
 

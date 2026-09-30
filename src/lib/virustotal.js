@@ -4,6 +4,8 @@
  * (Google Safe Browsing, Kaspersky, ESET, Bitdefender, Netcraft, PhishTank, etc.)
  */
 
+import { validarUrlExterna } from './seguridad';
+
 const VIRUSTOTAL_API_KEY = process.env.VIRUSTOTAL_API_KEY || '';
 
 /**
@@ -49,6 +51,13 @@ export function obtenerUrlIdVirusTotal(url) {
 export async function consultarUrlEnVirusTotal(url) {
   if (!url || typeof url !== 'string') {
     return { consultado: false, error: 'URL no válida' };
+  }
+
+  // V-02: Prevención SSRF — rechazar URLs internas/privadas
+  const checkSSRF = validarUrlExterna(url);
+  if (!checkSSRF.segura) {
+    console.warn('SSRF bloqueado en VirusTotal:', checkSSRF.razon, url);
+    return { consultado: false, error: 'URL no permitida para análisis externo.' };
   }
 
   // Si no está configurada la clave en .env.local, retornar estado informativo seguro

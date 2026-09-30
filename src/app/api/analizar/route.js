@@ -7,6 +7,8 @@ import { guardarAnalisis } from '@/lib/supabase';
 import { extraerUrlsDeTexto, consultarUrlEnVirusTotal } from '@/lib/virustotal';
 import { consultarUrlEnHybridAnalysis } from '@/lib/hybridanalysis';
 import { verificarLimiteServidor } from '@/lib/rateLimit';
+import { validarOrigen } from '@/lib/seguridad';
+
 
 // Limita el tiempo de un motor para que no bloquee la respuesta global
 function conTiempoLimite(promesa, ms, nombre) {
@@ -19,6 +21,23 @@ function conTiempoLimite(promesa, ms, nombre) {
 
 export async function POST(request) {
   try {
+    // V-06: Validar origen para prevenir abuso cross-origin
+    if (!validarOrigen(request)) {
+      return NextResponse.json(
+        { error: 'Origen no autorizado.' },
+        { status: 403 }
+      );
+    }
+
+    // V-03: Rechazar tempranamente requests con Content-Length excesivo
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+    if (contentLength > 2 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'El contenido excede el límite máximo permitido (2MB).' },
+        { status: 413 }
+      );
+    }
+
     // 0. Obtener IP y validar cuotas de uso justo (12h)
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
                request.headers.get('x-real-ip') ||

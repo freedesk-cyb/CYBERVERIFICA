@@ -8,7 +8,8 @@ import { extraerUrlsDeTexto, consultarUrlEnVirusTotal } from '@/lib/virustotal';
 import { consultarUrlEnHybridAnalysis } from '@/lib/hybridanalysis';
 import { verificarLimiteServidor } from '@/lib/rateLimit';
 import { validarOrigen } from '@/lib/seguridad';
-
+// Duración máxima de ejecución para Vercel Serverless Functions (hasta 60s)
+export const maxDuration = 60;
 
 // Limita el tiempo de un motor para que no bloquee la respuesta global
 function conTiempoLimite(promesa, ms, nombre) {

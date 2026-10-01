@@ -2,6 +2,8 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://verificaya.omarconexion28.workers.dev';
+
 export const metadata = {
   title: 'VerificaYa - Detecta Estafas con Inteligencia Artificial en Perú',
   description: 'Analiza mensajes sospechosos de WhatsApp, ofertas laborales falsas, préstamos gota a gota y phishing bancario con IA en segundos. Gratis y confidencial.',
@@ -17,11 +19,19 @@ export const metadata = {
   authors: [{ name: 'VerificaYa Perú' }],
   creator: 'VerificaYa',
   publisher: 'VerificaYa',
-  metadataBase: new URL('https://verificaya.pe'),
+  metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: '/',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
   openGraph: {
     title: 'VerificaYa - Detecta Estafas con Inteligencia Artificial en Perú',
     description: '¿Recibiste un mensaje sospechoso? Pégalo aquí y descubre con IA si es una estafa antes de perder tu dinero. 100% Gratis.',
-    url: 'https://verificaya.pe',
+    url: siteUrl,
     siteName: 'VerificaYa',
     locale: 'es_PE',
     type: 'website',
@@ -41,8 +51,22 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'VerificaYa',
+    alternateName: ['VerificaYa Perú', 'Verifica Ya'],
+    url: siteUrl,
+  };
+
   return (
     <html lang="es" className="scroll-smooth">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
         <Header />
         <main className="flex-1">
@@ -53,3 +77,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+

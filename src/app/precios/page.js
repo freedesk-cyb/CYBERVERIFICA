@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -39,6 +39,27 @@ export default function PreciosPage() {
   const [emailCopiado, setEmailCopiado] = useState(false);
   const [haDonado, setHaDonado] = useState(false);
   const [faqAbierta, setFaqAbierta] = useState(null);
+  const [visitas, setVisitas] = useState({ total_visitas: 12480, visitas_hoy: 0 });
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function registrar() {
+      try {
+        const res = await fetch('/api/visitas', { method: 'POST' });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelado && json.success && json.data) setVisitas(json.data);
+      } catch {
+        // Mantener el valor de respaldo inicial
+      }
+    }
+
+    registrar();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const correoContacto = 'verificayacyber@gmail.com';
 
@@ -213,6 +234,32 @@ export default function PreciosPage() {
             <p className="text-[11px] text-slate-400 mt-2 text-center">
               🛡️ Cubre costos de procesamiento de <strong>+18,000 análisis mensuales</strong> sin cobrarle a nadie.
             </p>
+          </div>
+
+          {/* Contador de visitas anónimo */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-800/70 backdrop-blur-md border border-slate-700/70 rounded-full px-4 py-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+              </span>
+              <span className="text-xs sm:text-sm text-slate-300 font-semibold">
+                <strong className="text-white font-black">
+                  {visitas.total_visitas.toLocaleString('es-PE')}
+                </strong>{' '}
+                personas nos han visitado
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-800/70 backdrop-blur-md border border-slate-700/70 rounded-full px-4 py-2">
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span className="text-xs sm:text-sm text-slate-300 font-semibold">
+                <strong className="text-orange-300 font-black">
+                  {visitas.visitas_hoy.toLocaleString('es-PE')}
+                </strong>{' '}
+                visitas hoy
+              </span>
+            </div>
           </div>
 
         </div>

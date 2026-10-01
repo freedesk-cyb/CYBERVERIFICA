@@ -34,7 +34,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob:",
               "font-src 'self'",
-              "connect-src 'self' https://api.mistral.ai https://integrate.api.nvidia.com https://opencode.ai https://www.virustotal.com https://www.hybrid-analysis.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com blob:",
+              "connect-src 'self' https://api.mistral.ai https://integrate.api.nvidia.com https://opencode.ai https://api.xkiro.com https://www.virustotal.com https://www.hybrid-analysis.com https://tessdata.projectnaptha.com https://cdn.jsdelivr.net https://unpkg.com blob:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

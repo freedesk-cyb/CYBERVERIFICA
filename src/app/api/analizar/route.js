@@ -3,6 +3,7 @@ import { analizarMensajeConGroq } from '@/lib/groq';
 import { analizarMensajeConOpencode } from '@/lib/opencode';
 import { analizarMensajeConMistral } from '@/lib/mistral';
 import { analizarMensajeConNvidia } from '@/lib/nvidia';
+import { analizarMensajeConXKiro } from '@/lib/xkiro';
 import { guardarAnalisis } from '@/lib/supabase';
 import { extraerUrlsDeTexto, consultarUrlEnVirusTotal } from '@/lib/virustotal';
 import { consultarUrlEnHybridAnalysis } from '@/lib/hybridanalysis';
@@ -104,19 +105,21 @@ export async function POST(request) {
       }
     }
 
-    // 2. Ejecutar Groq, Mistral, OpenCode y NVIDIA EN PARALELO INMEDIATO
-    // Nota: OpenCode space-bunny no soporta visión multimodal, enviamos null en imagen para ahorrar RAM
-    const [resGroq, resMistral, resOpencode, resNvidia] = await Promise.allSettled([
+    // 2. Ejecutar Groq, Mistral, OpenCode, NVIDIA y xKiro (MiniMax M3) EN PARALELO INMEDIATO
+    // Nota: OpenCode space-bunny y xKiro reciben null en imagen para ahorrar RAM y evitar timeouts
+    const [resGroq, resMistral, resOpencode, resNvidia, resXKiro] = await Promise.allSettled([
       conTiempoLimite(analizarMensajeConGroq(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 20000, 'Groq'),
       conTiempoLimite(analizarMensajeConMistral(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 20000, 'Mistral'),
       conTiempoLimite(analizarMensajeConOpencode(textoLimpio, telemetriaVT, telemetriaHA, null), 35000, 'OpenCode'),
       conTiempoLimite(analizarMensajeConNvidia(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 65000, 'NVIDIA'),
+      conTiempoLimite(analizarMensajeConXKiro(textoLimpio, telemetriaVT, telemetriaHA, null), 30000, 'xKiro MiniMax M3'),
     ]);
 
     const resultadoGroq = resGroq.status === 'fulfilled' ? resGroq.value : null;
     const resultadoMistral = resMistral.status === 'fulfilled' ? resMistral.value : null;
     const resultadoOpencode = resOpencode.status === 'fulfilled' ? resOpencode.value : null;
     const resultadoNvidia = resNvidia.status === 'fulfilled' ? resNvidia.value : null;
+    const resultadoXKiro = resXKiro.status === 'fulfilled' ? resXKiro.value : null;
 
     if (resGroq.status === 'rejected') {
       console.warn('Groq fallo:', resGroq.reason?.message);
@@ -130,20 +133,23 @@ export async function POST(request) {
     if (resNvidia.status === 'rejected') {
       console.warn('NVIDIA fallo:', resNvidia.reason?.message);
     }
+    if (resXKiro.status === 'rejected') {
+      console.warn('xKiro fallo:', resXKiro.reason?.message);
+    }
 
-    // Si los 4 motores fallaron, error total
-    if (!resultadoGroq && !resultadoMistral && !resultadoOpencode && !resultadoNvidia) {
+    // Si los 5 motores fallaron, error total
+    if (!resultadoGroq && !resultadoMistral && !resultadoOpencode && !resultadoNvidia && !resultadoXKiro) {
       return NextResponse.json(
         {
           error: 'Los motores de IA no pudieron procesar el mensaje.',
-          detalle: `${resGroq.reason?.message || ''} | ${resMistral.reason?.message || ''} | ${resOpencode.reason?.message || ''} | ${resNvidia.reason?.message || ''}`,
+          detalle: `${resGroq.reason?.message || ''} | ${resMistral.reason?.message || ''} | ${resOpencode.reason?.message || ''} | ${resNvidia.reason?.message || ''} | ${resXKiro.reason?.message || ''}`,
         },
         { status: 500 }
       );
     }
 
-    // Motor principal (Groq -> Mistral -> OpenCode -> NVIDIA)
-    const motorPrincipal = resultadoGroq || resultadoMistral || resultadoOpencode || resultadoNvidia;
+    // Motor principal (Groq -> Mistral -> xKiro -> OpenCode -> NVIDIA)
+    const motorPrincipal = resultadoGroq || resultadoMistral || resultadoXKiro || resultadoOpencode || resultadoNvidia;
 
     // 3. Guardar analisis anonimo
     try {
@@ -171,13 +177,16 @@ export async function POST(request) {
         // Motor 2: Mistral AI — Auditoria de seguridad europea
         mistral: resultadoMistral,
 
-        // Motor 3: OpenCode — Dictamen conciso
+        // Motor 3: xKiro — Razonamiento Lógico Profundo (MiniMax M3)
+        xkiro: resultadoXKiro,
+
+        // Motor 4: OpenCode — Dictamen conciso
         opencode: resultadoOpencode,
 
-        // Motor 4: NVIDIA — Diagnóstico de riesgo con Nemotron
+        // Motor 5: NVIDIA — Diagnóstico de riesgo con Nemotron
         nvidia: resultadoNvidia,
 
-        // Motor 5 & 6: Telemetria de URLs y Sandbox
+        // Telemetria de URLs y Sandbox
         virustotal: telemetriaVT,
         hybridanalysis: telemetriaHA,
 
@@ -185,6 +194,7 @@ export async function POST(request) {
         errores_ia: {
           groq: resGroq.status === 'rejected' ? resGroq.reason?.message : null,
           mistral: resMistral.status === 'rejected' ? resMistral.reason?.message : null,
+          xkiro: resXKiro.status === 'rejected' ? resXKiro.reason?.message : null,
           opencode: resOpencode.status === 'rejected' ? resOpencode.reason?.message : null,
           nvidia: resNvidia.status === 'rejected' ? resNvidia.reason?.message : null,
         },

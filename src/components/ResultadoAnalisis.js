@@ -23,6 +23,7 @@ import {
   ChevronUp,
   Flame,
   Cpu,
+  Zap,
 } from 'lucide-react';
 
 const NIVEL_CONFIG = {
@@ -471,7 +472,98 @@ function PanelNvidia({ nvidia, error }) {
   );
 }
 
-// Panel 3: VirusTotal (existente, adaptado)
+// Panel 5: xKiro — Razonamiento Lógico Profundo (MiniMax M3)
+function PanelXKiro({ xkiro, error }) {
+  if (!xkiro) return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex items-start gap-2.5 opacity-60">
+        <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+          <Zap className="w-5 h-5 text-purple-600" />
+        </div>
+        <div>
+          <div className="text-sm font-bold text-slate-700">Motor xKiro (MiniMax M3) — No disponible</div>
+          <div className="text-xs text-slate-500 mt-0.5">{error || 'El motor de razonamiento xKiro no pudo procesar este análisis.'}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const cfg = NIVEL_CONFIG[xkiro.nivel_riesgo] || NIVEL_CONFIG['Bajo'];
+
+  return (
+    <div className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50/80 via-indigo-50/60 to-violet-50/50 overflow-hidden shadow-sm">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-700 text-white flex items-center justify-center shadow-md shadow-purple-600/20">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-black text-slate-900">Razonamiento xKiro</span>
+                <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-extrabold uppercase tracking-wider border border-purple-200">
+                  MiniMax M3
+                </span>
+                <NivelBadge nivel={xkiro.nivel_riesgo} />
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5 font-mono">{xkiro.modelo_usado || 'minimax/minimax-m3:free'}</div>
+            </div>
+          </div>
+          <RiskGauge porcentaje={xkiro.porcentaje} nivel={xkiro.nivel_riesgo} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Señales lógicas detectadas */}
+          {xkiro.senales && xkiro.senales.length > 0 && (
+            <div className="p-3 rounded-xl bg-white/80 border border-purple-200/60 space-y-1">
+              <div className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                Deducciones clave:
+              </div>
+              {xkiro.senales.map((senal, i) => (
+                <div key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                  <span className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center ${cfg.gaugeBg}`}>
+                    {i + 1}
+                  </span>
+                  {senal}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Razonamiento deductivo y recomendación */}
+          <div className="space-y-2">
+            {xkiro.razonamiento_logico ? (
+              <div className="p-3 rounded-xl bg-white/80 border border-purple-200/60">
+                <div className="text-xs font-bold text-purple-900 mb-1 flex items-center gap-1">
+                  <Brain className="w-3 h-3 text-purple-600" />
+                  Razonamiento Deductivo:
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">{xkiro.razonamiento_logico}</p>
+              </div>
+            ) : xkiro.explicacion && (
+              <div className="p-3 rounded-xl bg-white/80 border border-purple-200/60">
+                <div className="text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Info className="w-3 h-3 text-purple-500" />
+                  Dictamen:
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">{xkiro.explicacion}</p>
+              </div>
+            )}
+            {xkiro.recomendacion && (
+              <div className="p-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
+                <div className="text-[10px] font-bold mb-0.5 opacity-90">Acción recomendada:</div>
+                <p className="text-xs font-medium leading-relaxed">{xkiro.recomendacion}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Panel 6: VirusTotal (existente, adaptado)
 function PanelVirusTotal({ virustotal }) {
   if (!virustotal) return null;
   return (
@@ -662,6 +754,7 @@ export default function ResultadoAnalisis({ resultado, mensajeAnalizado, onReset
   const copiarResultado = async () => {
     const groq = resultado?.groq;
     const mistral = resultado?.mistral;
+    const xkiro = resultado?.xkiro;
     const opencode = resultado?.opencode;
     const nvidia = resultado?.nvidia;
     const texto = '---VERIFICAYA ANALISIS COMPLETO---\n\n' +
@@ -672,6 +765,9 @@ export default function ResultadoAnalisis({ resultado, mensajeAnalizado, onReset
       '== MISTRAL AI (Auditoria de Seguridad) ==\n' +
       'Nivel: ' + (mistral?.nivel_riesgo || 'N/A') + ' (' + (mistral?.porcentaje || 0) + '%)\n' +
       'Evaluacion: ' + (mistral?.explicacion || 'N/A') + '\n\n' +
+      '== XKIRO (Razonamiento MiniMax M3) ==\n' +
+      'Nivel: ' + (xkiro?.nivel_riesgo || 'N/A') + ' (' + (xkiro?.porcentaje || 0) + '%)\n' +
+      'Razonamiento: ' + (xkiro?.razonamiento_logico || xkiro?.explicacion || 'N/A') + '\n\n' +
       '== OPENCODE (Dictamen Conciso) ==\n' +
       'Nivel: ' + (opencode?.nivel_riesgo || 'N/A') + ' (' + (opencode?.porcentaje || 0) + '%)\n' +
       'Dictamen: ' + (opencode?.explicacion || 'N/A') + '\n\n' +
@@ -691,7 +787,7 @@ export default function ResultadoAnalisis({ resultado, mensajeAnalizado, onReset
   const compartirWhatsApp = () => {
     const texto = encodeURIComponent(
       'Verificaya detecto: *' + nivel + ' riesgo* de estafa (' + porcentaje + '%). ' +
-      (resultado?.groq?.recomendacion || resultado?.opencode?.recomendacion || '') +
+      (resultado?.groq?.recomendacion || resultado?.xkiro?.recomendacion || resultado?.opencode?.recomendacion || '') +
       ' Analiza gratis en VerificaYa.pe'
     );
     window.open('https://wa.me/?text=' + texto, '_blank');
@@ -746,6 +842,11 @@ export default function ResultadoAnalisis({ resultado, mensajeAnalizado, onReset
                 <Flame className="w-3 h-3 text-orange-600" /> Mistral AI activo
               </span>
             )}
+            {resultado.xkiro && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                <Zap className="w-3 h-3 text-purple-600" /> xKiro MiniMax M3
+              </span>
+            )}
             {resultado.opencode && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
                 <Sparkles className="w-3 h-3" /> OpenCode activo
@@ -785,16 +886,19 @@ export default function ResultadoAnalisis({ resultado, mensajeAnalizado, onReset
       {/* Panel 2: Mistral AI — Auditoria de seguridad */}
       <PanelMistral mistral={resultado.mistral} error={resultado.errores_ia?.mistral} />
 
-      {/* Panel 3: OpenCode — Dictamen conciso */}
+      {/* Panel 3: xKiro — Razonamiento Lógico Profundo (MiniMax M3) */}
+      <PanelXKiro xkiro={resultado.xkiro} error={resultado.errores_ia?.xkiro} />
+
+      {/* Panel 4: OpenCode — Dictamen conciso */}
       <PanelOpencode opencode={resultado.opencode} error={resultado.errores_ia?.opencode} />
 
-      {/* Panel 4: NVIDIA Nemotron — Diagnóstico de riesgo */}
+      {/* Panel 5: NVIDIA Nemotron — Diagnóstico de riesgo */}
       <PanelNvidia nvidia={resultado.nvidia} error={resultado.errores_ia?.nvidia} />
 
-      {/* Panel 5: VirusTotal */}
+      {/* Panel 6: VirusTotal */}
       <PanelVirusTotal virustotal={resultado.virustotal} />
 
-      {/* Panel 6: Hybrid Analysis */}
+      {/* Panel 7: Hybrid Analysis */}
       <PanelHybridAnalysis hybridanalysis={resultado.hybridanalysis} />
 
     </div>

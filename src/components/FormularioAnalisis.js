@@ -62,13 +62,18 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
 
   // Sincronizar y actualizar cuotas locales cada segundo
   useEffect(() => {
-    setCuotas(obtenerEstadoCliente());
+    const timeout = setTimeout(() => {
+      setCuotas(obtenerEstadoCliente());
+    }, 0);
 
     const timer = setInterval(() => {
       setCuotas(obtenerEstadoCliente());
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(timer);
+    };
   }, []);
 
   // Comprime una imagen a data URL base64 (máx. 800px) para análisis visual de las IAs

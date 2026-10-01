@@ -417,23 +417,24 @@ export default function FormularioAnalisis({ onAnalisisCompletado, estaCargando,
       // 2. Intentar extraer texto mediante OCR como complemento
       let textoExtraidoTotal = '';
       try {
-        for (let i = 0; i < imagenes.length; i++) {
-          setEstadoOCR(`🔍 Leyendo texto de la captura ${i + 1} de ${imagenes.length}...`);
-          
-          const { createWorker } = await import('tesseract.js');
-          const ocrWorker = await createWorker('spa+eng', 1, {
-            logger: (m) => {
-              if (m.status === 'recognizing text' && m.progress) {
-                setEstadoOCR(`🔍 Leyendo captura ${i + 1} (${Math.round(m.progress * 100)}%)...`);
-              }
-            },
-          });
-          const { data: { text: ocrText } } = await ocrWorker.recognize(imagenes[i].file);
-          await ocrWorker.terminate();
-          
-          if (ocrText && ocrText.trim().length > 0) {
-            textoExtraidoTotal += `\n[Captura ${i + 1}]:\n` + ocrText.trim() + '\n';
+        const { createWorker } = await import('tesseract.js');
+        const ocrWorker = await createWorker('spa+eng', 1, {
+          logger: (m) => {
+            if (m.status === 'recognizing text' && m.progress) {
+              setEstadoOCR(`🔍 Leyendo captura (${Math.round(m.progress * 100)}%)...`);
+            }
+          },
+        });
+        try {
+          for (let i = 0; i < imagenes.length; i++) {
+            setEstadoOCR(`🔍 Leyendo texto de la captura ${i + 1} de ${imagenes.length}...`);
+            const { data: { text: ocrText } } = await ocrWorker.recognize(imagenes[i].file);
+            if (ocrText && ocrText.trim().length > 0) {
+              textoExtraidoTotal += `\n[Captura ${i + 1}]:\n` + ocrText.trim() + '\n';
+            }
           }
+        } finally {
+          await ocrWorker.terminate();
         }
       } catch (ocrErr) {
         console.warn('OCR falló o fue omitido, continuando con visión por IA:', ocrErr);

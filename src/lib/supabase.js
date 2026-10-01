@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -11,11 +10,17 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
   : null;
 
 /**
- * Genera un hash SHA-256 para preservar la privacidad del usuario
- * sin almacenar el texto sensible en claro.
+ * Genera un hash abreviado para preservar la privacidad sin requerir polyfills de Node.js
  */
 export function generarHashMensaje(texto) {
-  return crypto.createHash('sha256').update(texto.trim().toLowerCase()).digest('hex');
+  const str = texto.trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16) + str.length.toString(16);
 }
 
 /**
@@ -91,8 +96,11 @@ let memoriaAnalisis = [
 export async function guardarAnalisis({ mensajeOriginal, nivel_riesgo, porcentaje, categoria }) {
   const hash = generarHashMensaje(mensajeOriginal);
   const resumen = sanitizarTextoParaResumen(mensajeOriginal);
+  const uuidGen = typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `anl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   const registro = {
-    id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `anl-${Date.now()}`,
+    id: uuidGen,
     hash,
     resumen_anonimo: resumen,
     nivel_riesgo,
@@ -101,9 +109,9 @@ export async function guardarAnalisis({ mensajeOriginal, nivel_riesgo, porcentaj
     fecha_creacion: new Date().toISOString(),
   };
 
-  // Guardar en memoria siempre para estadísticas rápidas
+  // Guardar en memoria (optimizado a máx 20 elementos para cuidar la memoria RAM de Cloudflare Workers)
   memoriaAnalisis.unshift(registro);
-  if (memoriaAnalisis.length > 500) memoriaAnalisis.pop();
+  if (memoriaAnalisis.length > 20) memoriaAnalisis.pop();
 
   // Si Supabase está disponible, guardar en la tabla 'analisis'
   if (supabase) {

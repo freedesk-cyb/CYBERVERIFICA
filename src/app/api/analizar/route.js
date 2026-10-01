@@ -104,10 +104,11 @@ export async function POST(request) {
     }
 
     // 2. Ejecutar Groq, Mistral, OpenCode y NVIDIA EN PARALELO INMEDIATO
+    // Nota: OpenCode space-bunny no soporta visión multimodal, enviamos null en imagen para ahorrar RAM
     const [resGroq, resMistral, resOpencode, resNvidia] = await Promise.allSettled([
       conTiempoLimite(analizarMensajeConGroq(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 20000, 'Groq'),
       conTiempoLimite(analizarMensajeConMistral(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 20000, 'Mistral'),
-      conTiempoLimite(analizarMensajeConOpencode(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 35000, 'OpenCode'),
+      conTiempoLimite(analizarMensajeConOpencode(textoLimpio, telemetriaVT, telemetriaHA, null), 35000, 'OpenCode'),
       conTiempoLimite(analizarMensajeConNvidia(textoLimpio, telemetriaVT, telemetriaHA, imagenBase64), 65000, 'NVIDIA'),
     ]);
 

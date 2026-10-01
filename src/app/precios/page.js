@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import confetti from 'canvas-confetti';
 import { 
   Heart, 
   Sparkles, 
@@ -89,8 +88,9 @@ export default function PreciosPage() {
 
   const montoActual = montoPersonalizado ? Number(montoPersonalizado) : montoSeleccionado;
 
-  const lanzarConfeti = () => {
+  const lanzarConfeti = async () => {
     try {
+      const confetti = (await import('canvas-confetti')).default;
       confetti({
         particleCount: 90,
         spread: 70,
@@ -108,9 +108,10 @@ export default function PreciosPage() {
     lanzarConfeti();
   };
 
-  const handleYaDone = () => {
+  const handleYaDone = async () => {
     setHaDonado(true);
     try {
+      const confetti = (await import('canvas-confetti')).default;
       confetti({
         particleCount: 150,
         spread: 100,

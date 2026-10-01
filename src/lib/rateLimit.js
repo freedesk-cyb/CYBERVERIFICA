@@ -23,21 +23,21 @@ export const LIMITES_CONSULTAS = {
 //     propio Map → usar Upstash Redis o Vercel KV para persistencia.
 // -------------------------------------------------------------
 const registroServidorIP = new Map(); // key: `${ip}_${modalidad}` -> [timestamps]
-const MAX_ENTRADAS_MAP = 50_000; // V-07: Límite duro para prevenir memory leak
+const MAX_ENTRADAS_MAP = 1_000; // Optimizado para Cloudflare Workers (128MB RAM)
 
-// V-07: Limpieza periódica de entries expiradas (cada 10 minutos)
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const ahora = Date.now();
-    for (const [key, timestamps] of registroServidorIP) {
-      const vigentes = timestamps.filter((t) => ahora - t < VENTANA_MS);
-      if (vigentes.length === 0) {
-        registroServidorIP.delete(key);
-      } else {
-        registroServidorIP.set(key, vigentes);
-      }
+/**
+ * Limpieza pasiva de llaves expiradas en el Map (evita setInterval en serverless)
+ */
+function limpiarMapPasivo(ahora = Date.now()) {
+  if (registroServidorIP.size < 200) return;
+  for (const [key, timestamps] of registroServidorIP) {
+    const vigentes = timestamps.filter((t) => ahora - t < VENTANA_MS);
+    if (vigentes.length === 0) {
+      registroServidorIP.delete(key);
+    } else {
+      registroServidorIP.set(key, vigentes);
     }
-  }, 10 * 60 * 1000); // cada 10 minutos
+  }
 }
 
 /**
@@ -58,6 +58,8 @@ export function verificarLimiteServidor(ip, modalidad = 'mensaje') {
   const maxPermitido = LIMITES_CONSULTAS[mod].max;
   const key = `${ip || 'desconocido'}_${mod}`;
   const ahora = Date.now();
+
+  limpiarMapPasivo(ahora);
 
   const previos = registroServidorIP.get(key) || [];
   const vigentes = limpiarTimestampsVencidos(previos, ahora);

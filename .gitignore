@@ -52,3 +52,8 @@ next-env.d.ts
 *.traineddata
 *.traineddata.gz
 
+# scripts de prueba y archivos sueltos
+/test_*.mjs
+/pag.txt
+/* (1).html
+

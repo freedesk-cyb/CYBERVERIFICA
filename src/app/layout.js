@@ -2,7 +2,10 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://verificaya.omarconexion28.workers.dev';
+// Canonical y Open Graph: siempre el dominio de producción.
+// En Vercel, definir NEXT_PUBLIC_SITE_URL (ej. https://verificaya.pe) para evitar
+// que los deploys de preview generen URLs distintas por VERCEL_URL.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://verificaya.pe';
 
 export const metadata = {
   title: 'VerificaYa - Detecta Estafas con Inteligencia Artificial en Perú',
